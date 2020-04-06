@@ -1,13 +1,40 @@
 import tkinter as tk
-from GUI import BoardFrame
+from consts import *
+from GUI import BoardCanvas
+from chessboard import ChessBoard
+from AI import AI
 
-def main():
-    window = tk.Tk()
-    window.wm_title("GOMOKU GAME")
-    gui_board = BoardFrame(window)
-    gui_board.pack()
-    window.mainloop()
+
+class BoardFrame(tk.Frame):
+    """The Frame Widget is mainly used as a geometry master for other widgets, or to
+    provide padding between other widgets.
+    """
+    
+    def __init__(self, board, master = None):
+        tk.Frame.__init__(self, master)
+        self.create_widgets()
+
+
+    def create_widgets(self):
+        
+        self.boardCanvas = BoardCanvas(board,height = N*30+100, width = N*30+30)
+        #self.boardCanvas.bind('<Button-1>', self.boardCanvas.gameStart)
+        self.boardCanvas.pack()
 
 
 if __name__ == "__main__":
-    main()
+    window = tk.Tk()
+    window.wm_title("GOMOKU GAME")
+
+    board = ChessBoard()
+    gui_board = BoardFrame(board,window)
+    gui_board.pack()
+
+    
+    if enable_ai: 
+        ai=AI(RATIO, board, BoardState.WHITE,DEPTH)    
+        gui_board.boardCanvas.bind('<Button-1>',lambda event, arg=ai: gui_board.boardCanvas.player_vs_AI(event,arg))
+    else:
+        gui_board.boardCanvas.bind('<Button-1>', gui_board.boardCanvas.player_click)
+
+    window.mainloop()

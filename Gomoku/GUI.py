@@ -2,22 +2,25 @@
 
 import tkinter as tk
 import math
-from chessboard import ChessBoard
+
 from consts import *
+
 
 
 class BoardCanvas(tk.Canvas):
     """Apply the tkinter Canvas Widget to plot the game board and stones."""
     
-    def __init__(self, master=None, height=0, width=0,size=N):
+    def __init__(self, board, master=None, height=0, width=0):
         
         tk.Canvas.__init__(self, master, height=height, width=width)
+        # show the board
         self.draw_gameBoard()
-        self.gameBoard = ChessBoard()
+
+        self.gameBoard = board
         self.turn = BoardState.BLACK
-        self.undo = False
-        self.size = size
-        self.depth = 2
+        self.depth = DEPTH
+        self.gameover=False
+
         self.prev_exist = False
         self.prev_row = -1
         self.prev_col = -1
@@ -126,7 +129,7 @@ class BoardCanvas(tk.Canvas):
 
 
     def one_step(self,row,col):
-
+        
         self.draw_stone(row,col)
 
         if self.prev_exist == False:
@@ -145,19 +148,18 @@ class BoardCanvas(tk.Canvas):
         if  result != BoardState.EMPTY:
             self.create_text( (N*30+30)/2, N*30+50, text = '{} WINS !!'.format(result.name))
             print("{} WINS !!".format(result.name))
-            self.unbind('<Button-1>')  
+            self.gameover=True
+
+        # change turn and go on    
         else:
             self.change_state()
             print('{} turn now...\n'.format(self.turn._name_))
 
-        # show the updated chess board
-        self.gameBoard.get_chessBoard()
-        print('\n')
 
+    def player_click(self,event):
 
-    def check_click(self,event):
+        valid_pos = False
 
-        invalid_pos = True
         # since a user might not click exactly on an intersection, place the stone onto
         # the intersection closest to where the user clicks
         for i in range(N):
@@ -172,30 +174,38 @@ class BoardCanvas(tk.Canvas):
                 # and where the user clicks is less than 15, it is not necessary to find 
                 # the actual least distance
                 if (distance < 15) and (self.gameBoard.get_current_position_state(i,j) == BoardState.EMPTY):
-                    invalid_pos = False
+                    valid_pos = True
                     self.one_step(i,j)
-
                     break	# break the inner for loop
             else:
                 continue 
 
             break		# break the outer for loop
         
-        if invalid_pos:
-            print('Invalid position.\n')
-            print('{} turn now...\n'.format(self.turn._name_))
-
-class BoardFrame(tk.Frame):
-    """The Frame Widget is mainly used as a geometry master for other widgets, or to
-    provide padding between other widgets.
-    """
-    
-    def __init__(self, master = None):
-        tk.Frame.__init__(self, master)
-        self.create_widgets()
+        return valid_pos
 
 
-    def create_widgets(self):
-        self.boardCanvas = BoardCanvas(height = N*30+100, width = N*30+30)
-        self.boardCanvas.bind('<Button-1>', self.boardCanvas.check_click)
-        self.boardCanvas.pack()
+
+    def player_vs_AI(self,event,ai):
+
+        if self.gameover:
+            self.unbind('<Button-1>')
+        else:    
+            ret =self.player_click(event)
+            if ret and not self.gameover:       
+                # # unbind to ensure the user cannot click anywhere until the program has placed a white stone already
+                self.unbind('<Button-1>')
+
+                pos = ai.search()
+                self.one_step(pos[0],pos[1])
+
+                # # bind after the program makes its move so that the user can continue to play	    
+                self.bind('<Button-1>', lambda event, arg=ai: self.player_vs_AI(event,arg))
+            else:
+                print("Invalid position")
+       
+
+       
+
+
+
