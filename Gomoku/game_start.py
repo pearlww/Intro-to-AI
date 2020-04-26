@@ -2,7 +2,7 @@ import tkinter as tk
 from consts import *
 from GUI import BoardCanvas
 from chessboard import ChessBoard
-from AI import AI
+from AI import Pearls_AI, Johans_AI, Jakobs_AI
 
 
 class BoardFrame(tk.Frame):
@@ -31,10 +31,17 @@ if __name__ == "__main__":
     gui_board.pack()
 
     
-    if enable_ai: 
-        ai=AI(RATIO, board, BoardState.WHITE,DEPTH)    
-        gui_board.boardCanvas.bind('<Button-1>',lambda event, arg=ai: gui_board.boardCanvas.player_vs_AI(event,arg))
-    else:
+    if MODE == 0: 
         gui_board.boardCanvas.bind('<Button-1>', gui_board.boardCanvas.player_click)
+    elif MODE == 1:
+        #ai=Pearls_AI(RATIO, board, BoardState.WHITE,DEPTH)    
+        ai=Jakobs_AI(board, BoardState.WHITE, DEPTH)
+        #ai=Johans_AI(board, BoardState.WHITE, DEPTH)
+        gui_board.boardCanvas.bind('<Button-1>',lambda event, arg=ai: gui_board.boardCanvas.player_vs_AI(event,arg))
+    else:  
+        #ai2=Pearls_AI(RATIO, board, BoardState.BLACK,DEPTH) 
+        ai1=Jakobs_AI(board, BoardState.BLACK, DEPTH)
+        ai2=Jakobs_AI(board, BoardState.WHITE, DEPTH)
+        gui_board.boardCanvas.bind('<Button-1>',lambda event, ai1=ai1, ai2=ai2: gui_board.boardCanvas.AI_vs_AI(event,ai1,ai2))        
 
     window.mainloop()

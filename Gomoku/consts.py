@@ -2,7 +2,7 @@ from enum import Enum
 import numpy as np
 
 # the size of the chessboard. you can choose 7, 11, 15, 19...
-N=7
+N=15
 
 # the search depth. only odd numbers
 DEPTH=1
@@ -10,8 +10,10 @@ DEPTH=1
 # the type of AI. >1 more attack, <1 more defense
 RATIO=1
 
-# If false, player vs player; If true, player vs AI
-enable_ai= True
+# If 0, player vs player
+# If 1, player vs AI
+# If 2, AI vs AI
+MODE= 1
 
 threat_list=[[0, 1, 1, 0, 0], #live two
              [0, 0, 1, 1, 0],
@@ -30,10 +32,12 @@ threat_list=[[0, 1, 1, 0, 0], #live two
              [1, 1, 1, 1, 1]]    #five
 
 
-WEIGHTS=np.array([10000,1000,100,10,4,1])
+WEIGHTS=np.array([6,5,4,3,2,1])
 
+# Five, liveFour, sleepFour, liveThree, sleepThree, liveTwo
+my_shapes=np.array([0,0,0,0,0,0])
 
-
+enemy_shapes=np.array([0,0,0,0,0,0])
 
 class BoardState(Enum):
     EMPTY=0

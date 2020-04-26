@@ -130,6 +130,7 @@ class BoardCanvas(tk.Canvas):
 
     def one_step(self,row,col):
         
+
         self.draw_stone(row,col)
 
         if self.prev_exist == False:
@@ -148,12 +149,17 @@ class BoardCanvas(tk.Canvas):
         if  result != BoardState.EMPTY:
             self.create_text( (N*30+30)/2, N*30+50, text = '{} WINS !!'.format(result.name))
             print("{} WINS !!".format(result.name))
+            self.unbind('<Button-1>')
             self.gameover=True
 
         # change turn and go on    
         else:
             self.change_state()
             print('{} turn now...\n'.format(self.turn._name_))
+
+        # show the updated chess board
+        map=self.gameBoard.get_chessBoard()
+        print(m.value for m in map)
 
 
     def player_click(self,event):
@@ -184,25 +190,44 @@ class BoardCanvas(tk.Canvas):
         
         return valid_pos
 
+    def AI_vs_AI(self,event,ai):
+        
+        ret =self.player_click(event)
+        if ret and (not self.gameover):       
+            # # unbind to ensure the user cannot click anywhere until the program has placed a white stone already
+            # self.unbind('<Button-1>')
 
+            pos = ai.search()
+            self.one_step(pos[0],pos[1])
+
+            # # bind after the program makes its move so that the user can continue to play	    
+            # self.bind('<Button-1>', lambda event, arg=ai: self.player_vs_AI(event,arg))
+        else:
+            print("Invalid position")
 
     def player_vs_AI(self,event,ai):
 
-        if self.gameover:
-            self.unbind('<Button-1>')
-        else:    
-            ret =self.player_click(event)
-            if ret and not self.gameover:       
-                # # unbind to ensure the user cannot click anywhere until the program has placed a white stone already
-                self.unbind('<Button-1>')
+        ret =self.player_click(event)
+        if ret and (not self.gameover):       
+            # # unbind to ensure the user cannot click anywhere until the program has placed a white stone already
+            # self.unbind('<Button-1>')
 
-                pos = ai.search()
-                self.one_step(pos[0],pos[1])
+            pos = ai.search()
+            self.one_step(pos[0],pos[1])
 
-                # # bind after the program makes its move so that the user can continue to play	    
-                self.bind('<Button-1>', lambda event, arg=ai: self.player_vs_AI(event,arg))
-            else:
-                print("Invalid position")
+            # # bind after the program makes its move so that the user can continue to play	    
+            # self.bind('<Button-1>', lambda event, arg=ai: self.player_vs_AI(event,arg))
+        else:
+            print("Invalid position")
+    
+    def AI_vs_AI(self,event,ai1,ai2):
+        while not self.gameover:
+            pos = ai1.search()
+            self.one_step(pos[0],pos[1])
+            if self.gameover:
+                break
+            pos = ai2.search()
+            self.one_step(pos[0],pos[1])   
        
 
        
