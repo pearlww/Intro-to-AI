@@ -1,225 +1,133 @@
 
-import numpy as np
-np.set_printoptions(threshold=10000)
+from utils import *
 
 
-def eliminateIff(sentence_list_total):  # try first to use "modes Ponens"
+class BeliefBase(object):
+    def __init__(self):
+        self.beliefBase = []  
 
-    for i in range(len(sentence_list_total)):
-        #print("sentence i", sentence_list_total[i])
+    def CheckEntailment(self, formula, base = None):
+        '''
+        The priciple here is proof by refutation
+        (A entail s) if and only if the sentence (A and not(s) ) is unsatisable
+        '''
+        ret = self.checkConsistancy("n("+ formula +")", base)
+        if ret == True:
+            return False
+        else:    
+            return True   
 
-        if 'f' in sentence_list_total[i]:
-            #print("sentence i after f found", sentence_list_total[i])
-            for j in range(len(sentence_list_total[i])):
-                if sentence_list_total[i][j] == 'f':
-                    sentence_temp = sentence_list_total[i][0:j]+'i'+sentence_list_total[i][j+1:]+'a'+sentence_list_total[i][j+1:]+'i'+sentence_list_total[i][0:j]
-                    #print("sent_temp" ,sentence_temp)
+    def checkConsistancy(self, formula, base = None):
+        '''
+        check if the new formula consistant with exist belief base using truth table
+        '''
+        if base:
+            bcopy = base.copy()
+        else:
+            bcopy = self.beliefBase.copy()
+        bcopy.append(formula)
 
-            sentence_list_total_temp = []
-            sentence_list_total_temp = seperateAnd(sentence_list_total_temp, sentence_temp)
-            sentence_list_total_temp = eliminateImply(sentence_list_total_temp)
-            sentence_list_total_temp = ')a('.join(sentence_list_total_temp)
-            sentence_list_total_temp = '('+sentence_list_total_temp+')'
-            sentence_list_total[i]=sentence_list_total_temp
+        bcopy = eliminateIff(bcopy)
+        bcopy = eliminateImply(bcopy)
+        boolean_list = regitrerBooleans(bcopy)
+        truth_table = np.asarray(createTruthTable(len(boolean_list)))
+        beliefBase_translated = translateSentencesToSyntax(bcopy, boolean_list)
+        updated_truth_table = addRuleColumns(truth_table, beliefBase_translated)
+        np.savetxt('data.csv', updated_truth_table , delimiter=';',fmt='%d')
 
-    return sentence_list_total
+        return testForTrueKb(updated_truth_table) 
 
+    def revision(self,formula):
+        if not self.checkConsistancy(formula):
+            print("Beliefs are inconsistent if you add '{}', doing contraction now:".format(formula))    
+            self.contraction('n('+formula+')')
 
+        self.add(formula)
+        self.printBeliefBase()
 
-def eliminateImply(sentence_list_total):
-    for i in range(len(sentence_list_total)):
-        #print(elem)
-        if 'i' in sentence_list_total[i]:
-            for j in range(len(sentence_list_total[i])):
-                if sentence_list_total[i][j] == 'i':
-                    sentence_temp = 'n' + sentence_list_total[i][0:j] + 'o' + sentence_list_total[i][j + 1:]
-                    sentence_list_total[i] = sentence_temp
+    def contraction(self,formula):
+        '''
+        partial meet contraction
+        '''
+        remainderSet = self.findRemainderSet(formula)
+        selectedRemainders = self.selectionFunction(remainderSet)
 
-    return sentence_list_total
+        if len(selectedRemainders)==1:
+            self.beliefBase = selectedRemainders
+        else:
+            # find the intersection part
+            # using map() + intersection() 
+            res = list(set.intersection(*map(set, selectedRemainders))) 
+            self.beliefBase = res
+        print("After contraction, belief base = ", self.beliefBase)
 
+    def findRemainderSet(self,formula):
+        '''
+        Find the set of inclusion-maximal subsets of beliefBase that do not imply given formula.
+        '''
+        remainderSet = []
+        subset = findSubset(self.beliefBase)
+        print("subset:",subset)
+        for s in subset:     
+            if not self.CheckEntailment(formula,base=s):
+                remainderSet.append(s)
+        for i in remainderSet:
+            for j in remainderSet:
+                if i!=j:
+                    if i in findSubset(j):
+                        remainderSet.remove(i)
+        print("remainder set:", remainderSet)                
+        return remainderSet
 
-def seperateAnd(sentence_list_total, sentence):  # seperate all sentences containing AND (not within parentheses)
-    paran = 0
-    for i in range(len(sentence)):
+    def selectionFunction(self,remainderSet):
+        '''
+        An very easy selection function, choose the largest remainder
+        '''
+        #In the limiting case when remainderSet is empty, then return beliefBase
+        if len(remainderSet)==0:
+            return self.beliefBase
 
-        if sentence[i] == '(':
-            paran += 1
+        selectedRemainders=remainderSet[0]
+        for r in remainderSet:
+            if len(r)>len(selectedRemainders):
+                selectedRemainders = r
 
-        if sentence[i] == 'a' and paran == 0:
-            if len(sentence[0:i]) > 0:
-                sentence_list_total.append(sentence[0:i])
-            sentence_temp = sentence[i + 1:]
-            return seperateAnd(sentence_list_total, sentence_temp)
+        print("Selected remainder(s):", selectedRemainders)   
+        return selectedRemainders
 
-        if sentence[i] == ')' and paran == 0:
-            sentence_list_total.append(sentence[0:i + 1])
-            sentence_temp = sentence[i + 1:]
-            return seperateAnd(sentence_list_total, sentence_temp)
+    def add(self,formula):
+        if not self.checkConsistancy(formula):
+            print("Beliefs are inconsistent if you add {}".format(formula))    
+            print("Try revision function")
+            return 
 
-        if sentence[i] == ')':
-            paran -= 1
+        if formula not in self.beliefBase:
+            self.beliefBase.append(formula)
+        self.printBeliefBase()
 
-        if not 'a' in sentence:
-            sentence_list_total.append(sentence)
-            break
-
-        if i == len(sentence)-1:
-            sentence_list_total.append(sentence)
-            break
-
-    return sentence_list_total
-
-def regitrerBooleans(beliefBase):
-    boolean_list = []
-    for elem in beliefBase:
-        for l in elem:
-            if l.isupper() and l not in boolean_list:
-                boolean_list.append(l)
-    boolean_list.sort()
-    return boolean_list
-
-def createTruthTable(boolean_list_lenth):
-        if boolean_list_lenth < 1:
-            return [[]]
-        subtable = createTruthTable(boolean_list_lenth - 1)
-        #print(subtable)
-        return [row + [v] for row in subtable for v in [False, True]]
-
-
-
-def translateSentencesToSyntax(sentence_list_total,boolean_list):
-    translated_sentences = []
-    for i in range(len(sentence_list_total)):
-        translated_sentence = []
-        for j in range(len(sentence_list_total[i])):
-            if sentence_list_total[i][j].isupper():
-                sentence_temp = []
-                for k in range(len(boolean_list)):
-
-                    if sentence_list_total[i][j] == boolean_list[k]:
-                        sentence_temp.append(['updated_truth_table[i][',str(k),']'])
-
-                translated_sentence.append(''.join(sentence_temp[0]))
-
-
-            if sentence_list_total[i][j] == "(":
-                translated_sentence.append("(")
-
-            if sentence_list_total[i][j] == ")":
-                translated_sentence.append(")")
-
-            if sentence_list_total[i][j] == "n":
-                translated_sentence.append(" not ")
-
-            if sentence_list_total[i][j] == "o":
-                translated_sentence.append(" or ")
-
-            if sentence_list_total[i][j] == "a":
-                translated_sentence.append(" and ")
-
-        translated_sentence =''.join(translated_sentence)
-        translated_sentences.append(translated_sentence)
-
-    return translated_sentences
-
-def addRuleColumns(truth_table,sentence_list_total_translated):
-    rule_columns = np.zeros((np.size(truth_table,0),len(sentence_list_total_translated)),dtype=bool)
-    updated_truth_table = np.concatenate((truth_table,rule_columns),axis=1)
-
-    for j in range(np.size(truth_table,1),np.size(updated_truth_table,1)):
-        A = sentence_list_total_translated[j - np.size(truth_table, 1)]
-        for i in range(np.size(updated_truth_table,0)):
-            Z = eval(A)
-            updated_truth_table[i][j] = Z
-
-    kb_column = np.zeros(((np.size(truth_table,0),1)),dtype=bool)
-    updated_truth_table = np.concatenate((updated_truth_table, kb_column), axis=1)
-
-    for k in range(np.size(updated_truth_table,0)):
-        updated_truth_table[k][-1] = np.product(updated_truth_table[k][truth_table.shape[1]:-1])
-
-    return updated_truth_table
-
-def testForTrueKb(updated_truth_table):
-    ret = False
-    for i in range(updated_truth_table.shape[0]):
-        if updated_truth_table[i][-1] == 1:
-            print("Line ",i," makes this kb true")
-            ret = True
-    if ret ==False:
-        print("beliefs are inconsistent")        
-    return ret
-
-def enterAndCheck(beliefBase, sentence):
-
-    #add the new sentence to belief base
-    sentence = seperateAnd([],sentence)
-    sentence = eliminateIff(sentence)
-    sentence = eliminateImply(sentence)
-    for s in sentence:
-        beliefBase.append(s)
-
-    # check if the new sentence consistant with exist belief base using truth table
-    boolean_list = regitrerBooleans(beliefBase)
-    truth_table = np.asarray(createTruthTable(len(boolean_list)))
-    beliefBase_translated = translateSentencesToSyntax(beliefBase,boolean_list)
-    updated_truth_table = addRuleColumns(truth_table, beliefBase_translated)
-    result = testForTrueKb(updated_truth_table)
-    np.savetxt('data.csv', updated_truth_table , delimiter=';',fmt='%d')
-
-    return result
+    def printBeliefBase(self):
+        print("Current belief base:", self.beliefBase)
+            
 
 
 
-###################### Input ###################
-#sentence = "nCaAf(DoE)aBf(CoFoG)anAaB" #This sentence is equevilent with  R1 to R5 on page 247 in the AI book
-############################################## Were 'a' which are not inside brackets symbolize the seperation of rules
-#sentence = "PaQaPiQ"
-sentence = "Q"
+if __name__ == "__main__":
 
-#beliefBase = []
-beliefBase =  ['P', 'Q', 'nPoQ']
+    #This formula is equevilent with  R1 to R5 on page 247 in the AI book
+    #Where 'a' which are not inside brackets symbolize the seperation of rules
+    #formula = "nCaAf(DoE)aBf(CoFoG)anAaB" 
 
-enterAndCheck(beliefBase, sentence)
+    bb = BeliefBase()
 
+    formula = "PiQ" 
+    bb.add(formula)
+    formula = "P" 
+    bb.add(formula)
+    formula = "Q" 
+    bb.add(formula)
 
-########################
-#Menu
-########################
-
-
-"""
-while(True):
-    print("Press '1' to enter belief base")
-    print("Press '2' to enter logical entailment checking")
-    print("Press '3' to create a contaction in the belief base logical entailment checking")
-    caseswitch = int(input())
-
-    if caseswitch == 1:
-        print("a = AND, o = OR, n = NOT, i = imply, f = if and only if")
-        print("Enter Belief Base")
-        sentence = input()
-        sentence_list_total = []
-        #sentence_list_temp = []
-        enterBeliefBase(sentence_list_total,sentence)
-        
-        
-        print("press ENTER to add another sentance or x to exit")
-        caseswitch1 = input()
-        if caseswitch1 == "":
-            enterBeliefBase()
-
-        elif caseswitch1 == 'x':
-            return
+    formula = "nQ"
+    bb.revision(formula)
 
 
 
-    elif caseswitch == 2:
-        enterLogicalEntailment()
-
-    elif caseswitch == 3:
-        createContraction()
-
-    else:
-        print("not a valid number")
-"""
