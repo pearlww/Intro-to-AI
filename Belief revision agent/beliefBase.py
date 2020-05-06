@@ -38,6 +38,9 @@ class BeliefBase(object):
         return testForTrueKb(updated_truth_table) 
 
     def revision(self,formula):
+        '''
+        Using Levi identity
+        '''
         if not self.checkConsistancy(formula):
             print("Beliefs are inconsistent if you add '{}', doing contraction now:".format(formula))    
             self.contraction('n('+formula+')')
@@ -81,7 +84,8 @@ class BeliefBase(object):
 
     def selectionFunction(self,remainderSet):
         '''
-        An very easy selection function, choose the largest remainder
+        An very simple selection function, just choose the largest remainder
+        Further improvement should be added (Using plausibility orders)
         '''
         #In the limiting case when remainderSet is empty, then return beliefBase
         if len(remainderSet)==0:
@@ -96,6 +100,10 @@ class BeliefBase(object):
         return selectedRemainders
 
     def add(self,formula):
+        '''
+        Add a new formula in belief base if it is consistent
+        If inconsistent, will not be added
+        '''
         if not self.checkConsistancy(formula):
             print("Beliefs are inconsistent if you add {}".format(formula))    
             print("Try revision function")

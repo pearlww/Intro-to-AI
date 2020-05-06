@@ -3,11 +3,12 @@ from beliefBase import BeliefBase
 bb = BeliefBase()
 
 while(True):
-
+    print("")
     print("Press '1' to enter a formula")
     print("Press '2' to check logical entailment")
     print("Press '3' to do belief revision")
-    print("Press '4' to exit ")
+    print("Press '4' to print current belief base ")
+    print("Press '5' to exit")
     caseswitch = input()
 
     if caseswitch == '1':
@@ -38,8 +39,10 @@ while(True):
         bb.revision(formula)
 
     elif caseswitch == '4':
-        break
+        bb.printBeliefBase()
 
+    elif caseswitch == '5':
+        break
     else:
         print("not a valid number")
 
