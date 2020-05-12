@@ -14,7 +14,7 @@ class BeliefBase(object):
         ret = self.checkConsistancy("n("+ formula +")", base)
         if ret == True:
             return False
-        else:    
+        else:     
             return True   
 
     def checkConsistancy(self, formula, base = None):
@@ -105,10 +105,13 @@ class BeliefBase(object):
         If inconsistent, will not be added
         '''
         if not self.checkConsistancy(formula):
-            print("Beliefs are inconsistent if you add {}".format(formula))    
-            print("Try revision function")
+            print("failed")
+            print("Beliefs are inconsistent if you add {}, try revision function".format(formula))    
             return 
-
+        if self.CheckEntailment(formula):
+            print("failed")
+            print("The formula {} and be deducted from other formulas in the belief base".format(formula))    
+            return             
         if formula not in self.beliefBase:
             self.beliefBase.append(formula)
         self.printBeliefBase()
