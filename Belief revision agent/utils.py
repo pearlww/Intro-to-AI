@@ -169,6 +169,5 @@ def findSubset(beliefBase):
     return subset
 
 
-
 def testProperties(outcome):
     pass
