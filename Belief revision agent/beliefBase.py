@@ -131,9 +131,6 @@ class BeliefBase(object):
     #             self.beliefBase.append(f)
     #     self.printBeliefBase()
 
-    def printBeliefBase(self):
-        print("Current belief base:", self.beliefBase)
-
     def add(self,f):
         '''
         Add a new formula in belief base if it is consistent
